@@ -31,7 +31,6 @@ export class Renderer{
    else if(e.type==='bolt'){const to=this.project(e.tx,e.ty);c.lineWidth=3;c.beginPath();c.moveTo(0,-55*this.zoom);c.lineTo(to.x-p.x,to.y-p.y-10);c.stroke();}
    else{const r=e.r*this.zoom*(1-a*.6);c.lineWidth=e.type==='ultimate'?5:3;c.beginPath();c.ellipse(0,0,r,r*.72,this.t*.2,0,7);c.stroke();if(e.type==='slash'){c.lineWidth=8;c.beginPath();c.arc(0,-10,r,-2,.6);c.stroke();}if(e.type==='ultimate'){for(let i=0;i<8;i++){const angle=i*Math.PI/4+this.t,px=Math.cos(angle)*r,py=Math.sin(angle)*r*.72;this.polygon([[px,py-80*a],[px-5,py-20],[px,py],[px+5,py-20]],'#dddaff');}}if(e.type==='burst')for(let i=0;i<8;i++){const ang=i*.8;c.fillRect(Math.cos(ang)*r,Math.sin(ang)*r*.7,4,4);}}
    c.restore();}
-  if(lobby){c.save();c.translate(this.w*.72,this.h*.79);const scale=Math.min(this.w/240,this.h/145);c.scale(scale,scale);c.shadowColor='#6bcaff';c.shadowBlur=15;this.drawUnit({...g.player,hp:g.player.mhp,face:-.65,cinematic:true},false);c.restore();}
   this.drawMini(g);
  }
  drawDecor(u){const c=this.ctx,r=u.r;this.ellipse(7,4,r*1.1,r*.55,'#08221960');if(u.type==='rock'){this.polygon([[-r,0],[-r*.7,-r*.7],[r*.3,-r],[r,-r*.4],[r*.7,5],[0,r*.25]],'#526660','#83918a');this.polygon([[-r*.7,-r*.7],[r*.3,-r],[r,-r*.4],[0,-r*.2]],'#75867b');return;}c.fillStyle='#4d4c33';c.fillRect(-4,-28,8,32);const colors=['#183c2d','#22553b','#31684a'];for(let j=0;j<3;j++){const ry=-12-j*r*.57;this.polygon([[-r*(1-j*.16),ry],[0,ry-r*1.3],[r*(1-j*.16),ry],[0,ry+r*.3]],colors[j]);this.polygon([[0,ry-r*1.3],[r*(1-j*.16),ry],[0,ry+r*.3]],'#3b73524d');}}
