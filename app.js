@@ -1,7 +1,7 @@
 import {Game,ITEMS} from './core.js';
 import {Renderer} from './render.js';
 const $=id=>document.getElementById(id),r=new Renderer($('battle'),$('minimap'));let game=new Game(),playing=false,paused=false,keys={},mouse={x:innerWidth*.65,y:innerHeight*.5},rightMove=null,attackHeld=false,stick=null,last=performance.now(),sound=true,ac=null,uiTimer=0,lastNotice='',noticeUntil=0;
-const skillKeys={q:0,e:1,r:2,c:3,d:4,f:5};
+const skillKeys={q:0,e:1,r:2,c:3,shift:4,f:5};
 function beep(freq=400,length=.12){if(!sound||!ac)return;const o=ac.createOscillator(),gain=ac.createGain();o.type='triangle';o.frequency.setValueAtTime(freq,ac.currentTime);o.frequency.exponentialRampToValueAtTime(freq*.4,ac.currentTime+length);gain.gain.setValueAtTime(.05,ac.currentTime);gain.gain.exponentialRampToValueAtTime(.001,ac.currentTime+length);o.connect(gain);gain.connect(ac.destination);o.start();o.stop(ac.currentTime+length);}
 function start(){game=new Game();playing=true;paused=false;keys={};rightMove=null;attackHeld=false;document.querySelectorAll('.overlay').forEach(e=>e.hidden=true);$('lobby').hidden=true;$('hud').hidden=false;r.cam={x:game.player.x,y:game.player.y};try{ac??=new(window.AudioContext||window.webkitAudioContext)();ac.resume();}catch{}notice('欢迎来到峡谷 · 全军出击');updateUI();}
 function notice(t){lastNotice=t;noticeUntil=performance.now()+3500;$('notice').textContent=t;$('notice').hidden=false;}
