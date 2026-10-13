@@ -1,6 +1,8 @@
 # 峡谷之战 · Arena of Kings
 
-原创浏览器 MOBA 原型，受移动 MOBA 的经典玩法启发，非《王者荣耀》官方作品。没有使用官方素材。
+非官方浏览器 MOBA 玩法演示。包含李白、铠、貂蝉、孙尚香、孙悟空的英雄选择页、原画与 3D 旋转预览。
+
+战场形象采用 Three.js 独立重建，具有专属服饰与武器、八方向与行走／攻击姿态；不是官方游戏模型。五位英雄拥有独立战斗属性与简化技能。
 
 运行：`npm start`，访问 http://127.0.0.1:4173 。测试：`npm test`。
 
@@ -10,6 +12,16 @@ WASD / 方向键移动，右键指定目的地，鼠标指向技能方向，J / 
 
 ## GitHub Pages
 
-将 index.html、style.css、core.js、render.js、app.js 与 .nojekyll 放在仓库根目录。仓库 Settings → Pages → Deploy from a branch → main / root。没有构建步骤或外部依赖。
+将整个项目上传仓库，保留 assets/、vendor/ 与根目录所有 HTML、CSS、JS 文件。仓库 Settings → Pages → Deploy from a branch → main / root。没有构建步骤；运行时资源均本地托管。
 
-这是单机 Canvas 原型，不包括真人联网、官方英雄内容、商业游戏级 3D 模型、账号与匹配系统。
+这是单机 Canvas 原型，不包括真人联网、商业游戏级角色模型、账号与匹配系统。
+
+## 素材来源
+
+角色原画与头像来自腾讯《王者荣耀》公开英雄展示页面：https://pvp.qq.com/web201605/herolist.shtml ，图片资源位于 https://game.gtimg.cn/images/yxzj/img201606/ 。相关角色与图片权益归腾讯及相应权利人所有，不授予再使用许可。此项目不是官方产品。
+
+Three.js r160：MIT，许可见 vendor/THREE-LICENSE.txt。
+
+## 浏览器检查
+
+安装 Playwright 后，启动 npm start，再运行 node tests/hero-browser-check.cjs。可通过 CHROME_PATH 指定已安装 Chrome，通过 GAME_URL 指定公网版本。测试覆盖五位选将、筛选、3D、HUD、技能、重新选将与手机布局。

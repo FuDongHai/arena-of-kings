@@ -1,0 +1,19 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const assert=require('node:assert/strict');
+(async()=>{
+ const browser=await chromium.launch({executablePath:process.env.CHROME_PATH,headless:true,args:['--no-sandbox','--enable-webgl','--use-gl=angle','--use-angle=swiftshader']});
+ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(process.env.GAME_URL||'http://127.0.0.1:4173');await page.click('#start');await page.waitForSelector('#heroSelect:not([hidden])');
+ for(const [id,name] of [['libai','李白'],['kai','铠'],['diaochan','貂蝉'],['sunshangxiang','孙尚香'],['wukong','孙悟空']]){await page.click(`[data-hero="${id}"]`);assert.equal(await page.textContent('#selectedName'),name);const loaded=await page.locator(`[data-hero="${id}"] img`).evaluate(i=>i.complete&&i.naturalWidth>0);assert.ok(loaded,`${id} avatar missing`);}
+ await page.click('[data-hero="libai"]');await page.screenshot({path:'selection.png'});await page.waitForFunction(()=>arena.heroModels?.ready,{},{timeout:120000});
+ assert.equal(await page.evaluate(()=>arena.heroModels.atlases.size),5);await page.click('[data-view="model"]');await page.waitForTimeout(500);assert.ok(await page.locator('#heroPreview').isVisible());await page.screenshot({path:'model.png'});for(const id of ['kai','diaochan','sunshangxiang','wukong']){await page.click(`[data-hero="${id}"]`);await page.waitForTimeout(150);await page.screenshot({path:`model-${id}.png`});}await page.click('[data-hero="libai"]');
+ await page.mouse.move(850,420);await page.mouse.down();await page.mouse.move(950,420);await page.mouse.up();await page.click('[data-view="art"]');
+ await page.click('[data-role="法师"]');assert.equal(await page.locator('[data-hero]').count(),1);await page.click('[data-hero="diaochan"]');await page.click('[data-role="全部"]');
+ await page.click('#confirmHero');assert.equal(await page.evaluate(()=>arena.game.player.heroId),'diaochan');assert.equal(await page.textContent('#battleHeroName'),'貂蝉');assert.match(await page.textContent('.s0 small'),/落·红雨/);
+ const before=await page.evaluate(()=>arena.game.player.y);await page.keyboard.down('w');await page.waitForTimeout(400);await page.keyboard.up('w');assert.ok(await page.evaluate(()=>arena.game.player.y)<before);
+ await page.keyboard.press('q');assert.ok(await page.evaluate(()=>arena.game.player.cd[0])>0);await page.screenshot({path:'heroes-battle.png'});
+ await page.evaluate(()=>{arena.game.damage(arena.game.units.find(u=>u.kind==='core'&&u.team===1),99999,arena.game.player);});await page.waitForSelector('#resultModal:not([hidden])');await page.click('#reselectHero');assert.ok(await page.locator('#heroSelect').isVisible());
+ await page.setViewportSize({width:844,height:390});await page.click('[data-hero="sunshangxiang"]');await page.screenshot({path:'selection-mobile.png'});await page.click('#confirmHero');assert.equal(await page.evaluate(()=>arena.game.player.heroId),'sunshangxiang');await page.keyboard.press('q');assert.ok(await page.evaluate(()=>arena.game.player.cd[0])>0);
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{arena.game.damage(arena.game.units.find(u=>u.kind==='core'&&u.team===1),99999,arena.game.player);});await page.waitForSelector('#resultModal:not([hidden])');await page.click('#reselectHero');await page.screenshot({path:'selection-portrait.png',fullPage:true});assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({heroSelection:5,models:'3D ready',filters:true,selectedHeroInBattle:true,movement:true,skills:true,reselect:true,mobile:true,pageErrors:errors}));await browser.close();
+})().catch(e=>{console.error(e);process.exit(1);});
