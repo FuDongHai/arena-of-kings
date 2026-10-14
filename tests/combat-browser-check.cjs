@@ -13,7 +13,7 @@ const assert=require('node:assert/strict');
    arena.start(id);const g=arena.game,p=g.player;g.aiEnabled=false;g.wave=0;p.x=1200;p.y=1200;
    for(const u of g.units)if(u!==p){u.x=2200;u.y=100;u.speed=0;u.atk=0;}
    const targets=g.heroes.filter(u=>u.team===1);targets.forEach((e,j)=>{e.x=1380+(j%2)*70;e.y=1140+j*40;e.mhp=e.hp=20000;});
-   const e=targets[0];if(id==='libai'){e.x=1250;e.y=1200;for(let j=0;j<4;j++){p.cool=0;g.basicAttack(p,e);}g.cast(1);g.cast(2,e);}
+   const e=targets[0];if(id==='libai'){e.x=1250;e.y=1200;for(let j=0;j<4;j++){p.cool=0;g.basicAttack(p,e);for(let k=0;k<5;k++)g.tick(.05);}g.cast(1);g.cast(2,e);}
    if(id==='kai'){g.cast(2,e);g.cast(0,e);g.cast(1,e);}
    if(id==='diaochan'){g.cast(2,e);g.cast(0,e);g.cast(1,{x:1200,y:1200});}
    if(id==='sunshangxiang'){g.cast(0,{x:1200,y:1450});g.basicAttack(p,e);g.cast(1,e);g.cast(2,e);}

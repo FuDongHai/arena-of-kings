@@ -11,16 +11,25 @@ function later(g,delay,source,run){g.pending.push({at:g.time+delay,source,run});
 function hit(g,p,u,amount,mark=true){if(u.hp<=0||g.result)return false;if(u.invulnerable>0||u.guard>0){g.damage(u,amount,p);return false;}g.damage(u,amount,p);if(p.heroId==='diaochan'&&mark&&u.hp>0){u.flowers??={};const n=(u.flowers[p.id]?.count||0)+1;u.flowers[p.id]={count:n,time:5};if(n>=4){delete u.flowers[p.id];effect(g,'bloom',u,150,{color:p.color,life:1});p.hp=Math.min(p.mhp,p.hp+125);for(const e of enemies(g,p))if(distance(u,e)<155){if(hit(g,p,e,p.atk*1.8,false)!==false)e.slow=1.3;}}}return true;}
 function area(g,p,at,r,damage,stun=0){const struck=[];for(const u of enemies(g,p))if(distance(at,u)<r&&hit(g,p,u,damage)!==false){u.stun=Math.max(u.stun||0,stun);struck.push(u);}return struck;}
 function dash(g,p,a,d,kind){const from={x:p.x,y:p.y,color:p.color,face:a};p.x=clamp(p.x+Math.cos(a)*d);p.y=clamp(p.y+Math.sin(a)*d);effect(g,kind,from,d,{tx:p.x,ty:p.y,angle:a,heroId:p.heroId,life:.7});}
-function projectile(g,p,a,kind,damage,range=650,extra={}){const q={x:p.x,y:p.y,start:{x:p.x,y:p.y},source:p,team:p.team,angle:a,kind,color:p.color,damage,speed:780,radius:35,range,travel:0,life:4,phase:'out',hits:new Set(),trail:[],...extra};g.projectiles.push(q);return q;}
-export function basicAttack(g,p,t){if(p.hp<=0||t.hp<=0||p.cool>0||p.stun>0||p.dancing>0)return false;const power=p.empowered;const reach=p.range+70+(power?170:0);if(distance(p,t)>reach)return false;p.face=Math.atan2(t.y-p.y,t.x-p.x);p.casting=.32;p.cool=p.kind==='hero'?.62:1.2;p.empowered=null;let damage=p.atk*(power?.mult||1);
- if(p.heroId==='wukong'&&t.staffMarks?.[p.id]>0){damage+=p.atk*.65;t.staffMarks[p.id]--;}
- if(p.range>200){projectile(g,p,p.face,p.heroId==='diaochan'?'petal':power?'chargedShot':'shot',damage,power?850:650,{target:power?null:t,speed:power?1300:1000,pierce:!!power,radius:power?48:25});effect(g,'muzzle',p,power?110:55,{life:.35});}
- else{const landed=hit(g,p,t,damage);effect(g,p.heroId==='wukong'?'staffSweep':'crescent',p,power?165:115,{angle:p.face,color:p.color,life:power?.65:.4,strong:!!power});effect(g,'impact',t,power?95:45,{color:p.color,life:.45});if(p.heroId==='libai'&&landed!==false){p.passiveStacks=Math.min(4,(p.passiveStacks||0)+1);p.passiveTime=5;if(p.passiveStacks===4)effect(g,'unlock',p,90,{life:.7});}}
- return true;
+function projectile(g,p,a,kind,damage,range=650,extra={}){const q={x:p.x,y:p.y,start:{x:p.x,y:p.y},source:p,team:p.team,angle:a,kind,color:p.color||(p.team===1?'#ffc48a':'#8edcff'),damage,speed:780,radius:35,range,travel:0,life:4,phase:'out',hits:new Set(),trail:[],...extra};g.projectiles.push(q);return q;}
+export function basicAttack(g,p,t){
+ if(p.hp<=0||t.hp<=0||p.cool>0||p.stun>0||p.dancing>0)return false;
+ const power=p.empowered,reach=p.range+70+(power?170:0);if(distance(p,t)>reach)return false;
+ const angle=Math.atan2(t.y-p.y,t.x-p.x),windup=p.kind==='hero'?(p.heroId==='wukong'?.26:p.heroId==='kai'?.24:.2):0;
+ p.face=angle;p.cool=p.kind==='hero'?.7:1.2;p.empowered=null;
+ if(p.kind==='hero')p.attackMotion={start:g.time,windup,duration:.56,angle,strong:!!power};
+ const motion=p.attackMotion;const strike=()=>{
+  if(p.stun>0||p.dancing>0||(windup&&p.attackMotion!==motion)||t.hp<=0||distance(p,t)>reach+45)return;
+  let damage=p.atk*(power?.mult||1);
+  if(p.heroId==='wukong'&&t.staffMarks?.[p.id]>0){damage+=p.atk*.65;t.staffMarks[p.id]--;}
+  if(p.range>200){projectile(g,p,angle,p.heroId==='diaochan'?'petal':power?'chargedShot':'shot',damage,power?850:650,{target:power?null:t,speed:power?1300:1000,pierce:!!power,radius:power?48:25});effect(g,'muzzle',p,power?110:55,{life:.35});}
+  else{const landed=hit(g,p,t,damage);effect(g,p.heroId==='wukong'?'staffSweep':'crescent',p,power?165:115,{angle,color:p.color,life:power?.65:.4,strong:!!power});effect(g,'impact',t,power?95:45,{color:p.color,life:.45});if(p.heroId==='libai'&&landed){p.passiveStacks=Math.min(4,(p.passiveStacks||0)+1);p.passiveTime=5;if(p.passiveStacks===4)effect(g,'unlock',p,90,{life:.7});}}
+ };
+ if(windup)later(g,windup,p,strike);else strike();return true;
 }
 export function castHero(g,p,i,aim){g.lastCastError='';if(g.result||p.hp<=0||p.stun>0||p.dancing>0||p.cd[i]>0)return false;const s=p.skills[i];if(!s)return false;const id=p.heroId;
  if(id==='libai'&&i===2&&(p.passiveStacks||0)<4){g.lastCastError='青莲剑歌：普攻命中四次，解锁大招';return false;}
- const staged=id==='libai'&&i===0&&p.dashStage;if(!staged&&p.mana<s.cost)return false;if(!staged)p.mana-=s.cost;p.cd[i]=s.cool;const a=aim||{x:p.x+Math.cos(p.face)*400,y:p.y+Math.sin(p.face)*400},angle=Math.atan2(a.y-p.y,a.x-p.x);p.face=angle;p.casting=.45;g.recall=0;
+ const staged=id==='libai'&&i===0&&p.dashStage;if(!staged&&p.mana<s.cost)return false;if(!staged)p.mana-=s.cost;p.cd[i]=s.cool;const a=aim||{x:p.x+Math.cos(p.face)*400,y:p.y+Math.sin(p.face)*400},angle=Math.atan2(a.y-p.y,a.x-p.x);p.face=angle;p.attackMotion=null;p.casting=.45;g.recall=0;
  if(id==='libai'){
   if(i===0){if(!p.dashStage){p.dashOrigin={x:p.x,y:p.y};p.dashStage=1;p.dashWindow=5;effect(g,'origin',p,50,{life:5});}else p.dashStage++;if(p.dashStage===3){const from={...p};Object.assign(p,p.dashOrigin);effect(g,'dashTrail',from,distance(from,p),{tx:p.x,ty:p.y,life:.65});p.dashStage=0;p.dashWindow=0;}else{const from={x:p.x,y:p.y};dash(g,p,angle,250,'dashTrail');for(const u of enemies(g,p))if(segmentDistance(u,from,p)<85){if(hit(g,p,u,p.atk*1.6)!==false)u.stun=.35;}p.cd[0]=.4;}}
   if(i===1){area(g,p,p,235,p.atk*1.5);p.invulnerable=.3;g.fields.push({kind:'swordCircle',x:p.x,y:p.y,r:235,time:2,max:2,source:p,hits:new Set()});effect(g,'swordCircle',p,235,{life:2});}
@@ -53,8 +62,9 @@ function segmentDistance(u,a,b){const dx=b.x-a.x,dy=b.y-a.y,n=dx*dx+dy*dy,t=n?Ma
 // Earliest swept circle intersection, including a target already overlapping the muzzle.
 function contactTime(u,a,b,r){const dx=b.x-a.x,dy=b.y-a.y,ox=a.x-u.x,oy=a.y-u.y,A=dx*dx+dy*dy,C=ox*ox+oy*oy-r*r;if(C<=0)return 0;if(!A)return Infinity;const B=2*(ox*dx+oy*dy),d=B*B-4*A*C;if(d<0)return Infinity;const t=(-B-Math.sqrt(d))/(2*A);return t>=0?t:Infinity;}
 export function tickCombat(g,dt){
+ for(const p of g.heroes)if(p.hp<=0||p.stun>0||p.dancing>0)p.attackMotion=null;
  const ready=g.pending.filter(e=>e.at<=g.time);g.pending=g.pending.filter(e=>e.at>g.time&&e.source.hp>0);for(const e of ready)if(e.source.hp>0)e.run();
- for(const p of g.heroes){for(const key of ['guard','invulnerable','dancing','leaping','slow','passiveTime'])p[key]=Math.max(0,(p[key]||0)-dt);if(p.passiveTime===0)p.passiveStacks=0;if(p.empowered&&(p.empowered.time-=dt)<=0)p.empowered=null;if(p.dashStage&&(p.dashWindow-=dt)<=0){p.dashStage=0;p.cd[0]=p.skills[0].cool;}if(p.hp<=0){p.empowered=null;p.passiveStacks=0;p.dashStage=0;p.guard=0;}}
+ for(const p of g.heroes){if(p.attackMotion&&g.time-p.attackMotion.start>=p.attackMotion.duration)p.attackMotion=null;for(const key of ['guard','invulnerable','dancing','leaping','slow','passiveTime'])p[key]=Math.max(0,(p[key]||0)-dt);if(p.passiveTime===0)p.passiveStacks=0;if(p.empowered&&(p.empowered.time-=dt)<=0)p.empowered=null;if(p.dashStage&&(p.dashWindow-=dt)<=0){p.dashStage=0;p.cd[0]=p.skills[0].cool;}if(p.hp<=0){p.empowered=null;p.passiveStacks=0;p.dashStage=0;p.guard=0;}}
  for(const u of g.units){if(u.flowers)for(const [id,m]of Object.entries(u.flowers))if((m.time-=dt)<=0)delete u.flowers[id];if(u.staffMarkTime&&(u.staffMarkTime-=dt)<=0)u.staffMarks={};if(u.kind!=='hero')u.slow=Math.max(0,(u.slow||0)-dt);}
  for(const f of g.fields){f.time-=dt;if(f.source.hp<=0){f.time=0;continue;}if(f.kind==='lotus'&&distance(f,f.source)<f.r){for(let i=0;i<2;i++)f.source.cd[i]=Math.max(0,f.source.cd[i]-dt*1.2);}if(f.kind==='swordCircle')for(const u of enemies(g,f.source))if(Math.abs(distance(u,f)-f.r)<35&&!f.hits.has(u.id)){f.hits.add(u.id);if(hit(g,f.source,u,f.source.atk*1.8)!==false)u.slow=1;}if(f.time<=0&&f.kind==='lotus'){area(g,f.source,f,f.r,f.source.atk);effect(g,'bloom',f,f.r,{color:f.source.color,life:.9});}}
  g.fields=g.fields.filter(f=>f.time>0);

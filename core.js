@@ -6,13 +6,17 @@ export const ITEMS=[{name:'破军',icon:'⚔',cost:650,desc:'攻击 +45',atk:45}
 export const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const spawn=t=>({x:t?2190:210,y:t?210:2190});
 export class Game{
- constructor(selectedId='libai'){this.time=0;this.wave=-1;this.units=[];this.effects=[];this.projectiles=[];this.pending=[];this.fields=[];this.fxId=0;this.events=[];this.score=[0,0];this.result=null;this.nextId=0;this.move=null;this.attack=false;this.aim=null;this.heroes=[];const selected=heroById(selectedId),roster=[selected,...HEROES.filter(h=>h.id!==selected.id)];
+ constructor(selectedId='libai'){this.time=0;this.wave=0;this.units=[];this.effects=[];this.projectiles=[];this.pending=[];this.fields=[];this.fxId=0;this.events=[];this.score=[0,0];this.result=null;this.nextId=0;this.move=null;this.attack=false;this.aim=null;this.heroes=[];const selected=heroById(selectedId),roster=[selected,...HEROES.filter(h=>h.id!==selected.id)];
   for(let t=0;t<2;t++){for(let i=0;i<5;i++){const s=spawn(t),def=t?HEROES[i]:roster[i];const h=this.add({kind:'hero',team:t,x:s.x+(i%3)*65,y:s.y-(Math.floor(i/3)+1)*75,mhp:def.hp,atk:def.atk,speed:def.speed,range:def.range,lane:i%3,name:def.name,heroId:def.id,skills:def.skills,color:def.color,model:HEROES.indexOf(def),level:1,xp:0,gold:600,mana:600,maxMana:600,kills:0,deaths:0,items:[],cd:[0,0,0,0,0,0],armor:def.armor,leech:0});this.heroes.push(h);}
    this.add({kind:'core',team:t,...spawn(t),mhp:6500,atk:180,range:260,name:'水晶'});
    LANES.forEach((lane,l)=>[.09,.21,.34].forEach(f=>{const p=this.point(l,t,f);this.add({kind:'tower',team:t,...p,mhp:3000,atk:170,range:270,name:'防御塔'});}));
   }this.player=this.heroes[0];
-  [[770,850],[1590,1560],[700,1550],[1650,720]].forEach(([x,y],i)=>this.add({kind:'monster',team:2,x,y,mhp:i<2?2600:1000,atk:75,range:100,speed:60,name:i<2?'远古守卫':'苍狼',home:{x,y},respawn:0}));
+  [[770,850],[1590,1560],[700,1550],[1650,720]].forEach(([x,y],i)=>this.add({kind:'monster',team:2,x,y,mhp:i<2?2600:1000,atk:75,range:100,speed:60,name:i<2?'远古守卫':'苍狼',home:{x,y},respawn:0}));this.spawnWave(0);
  }
+ spawnWave(wave){for(let team=0;team<2;team++)for(let lane=0;lane<3;lane++){
+  const types=['melee','melee','ranged',...(wave%3===0?['siege']:[])];
+  types.forEach((type,i)=>{const progress=.06-i*.014,at=this.point(lane,team,progress),siege=type==='siege',ranged=type==='ranged';this.add({kind:'minion',minionType:type,team,...at,mhp:siege?1150:ranged?480:650,atk:siege?65:ranged?42:35,armor:siege?12:0,speed:siege?135:145,range:siege?235:ranged?215:75,lane,progress,color:team?'#ff947d':'#7dcfff',name:siege?'炮车':ranged?'远程兵':'近战兵'});});
+ }if(wave===0)this.message('全军出击 · 三路兵线已出发');}
  add(o){const u={id:this.nextId++,hp:o.mhp,cool:0,face:-.8,...o};this.units.push(u);return u;}
  point(l,t,f){const ps=t?[...LANES[l]].reverse():LANES[l];const lens=ps.slice(1).map((p,i)=>Math.hypot(p[0]-ps[i][0],p[1]-ps[i][1]));let n=lens.reduce((a,b)=>a+b,0)*f;for(let i=0;i<lens.length;i++){if(n<=lens[i])return {x:ps[i][0]+(ps[i+1][0]-ps[i][0])*n/lens[i],y:ps[i][1]+(ps[i+1][1]-ps[i][1])*n/lens[i]};n-=lens[i];}return {x:ps.at(-1)[0],y:ps.at(-1)[1]};}
  message(text){this.events.unshift({text,time:this.time});this.events=this.events.slice(0,5);}
@@ -30,7 +34,7 @@ export class Game{
  walk(u,p,dt){const d=dist(u,p);if(d<4)return;const n=Math.min(d,u.speed*(u.slow>0?.55:1)*dt);u.face=Math.atan2(p.y-u.y,p.x-u.x);u.x+=Math.cos(u.face)*n;u.y+=Math.sin(u.face)*n;}
  target(u,r){let best=null,b=Infinity;for(const e of this.units){if(e.hp<=0||e.team===u.team||e.team===2&&u.kind!=='hero'||e.team!==2&&u.team===2&&e!==u.aggro)continue;const d=dist(u,e);const priority=d+(e.kind==='hero'?0:e.kind==='minion'?-35:40);if(d<r&&priority<b){b=priority;best=e;}}return best;}
  tick(dt){if(this.result)return;dt=Math.min(.1,dt);this.time+=dt;this.effects=this.effects.filter(e=>(e.life-=dt)>0);this.units=this.units.filter(u=>u.kind!=='minion'||u.hp>0);
-  if(Math.floor(this.time/18)>this.wave){this.wave=Math.floor(this.time/18);for(let t=0;t<2;t++)for(let l=0;l<3;l++)for(let i=0;i<3;i++){const s=this.point(l,t,0);this.add({kind:'minion',team:t,...s,x:s.x+i*22,y:s.y+i*22,mhp:i===2?480:360,atk:i===2?45:30,speed:115,range:i===2?185:70,lane:l,progress:0,name:'士兵'});}if(this.wave===0)this.message('欢迎来到峡谷 · 全军出击');}
+  if(Math.floor(this.time/18)>this.wave){this.wave=Math.floor(this.time/18);this.spawnWave(this.wave);}
   const p=this.player;
   tickCombat(this,dt);
   if(this.recall>0){this.recall-=dt;if(this.recall<=0){Object.assign(p,spawn(0));p.hp=p.mhp;p.mana=p.maxMana;this.fx(p.x,p.y,'ring','#7deaff',160);}}

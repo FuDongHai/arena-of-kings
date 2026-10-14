@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {Game,dist} from '../core.js';
+function duel(id='libai'){const g=new Game(id);g.aiEnabled=false;g.units=g.units.filter(u=>u.kind!=='minion');const p=g.player;p.x=1200;p.y=1200;for(const u of g.units)if(u!==p){u.x=2200;u.y=100;u.speed=0;u.atk=0;}const e=g.heroes[5];e.x=1260;e.y=1200;e.mhp=e.hp=10000;return {g,p,e};}
+const step=(g,t)=>{for(let i=0;i<t/.05;i++)g.tick(.05);};
+test('hero basic attack winds up before damage and passive stack',()=>{const {g,p,e}=duel();g.basicAttack(p,e);assert.equal(e.hp,e.mhp);assert.equal(p.passiveStacks||0,0);assert.ok(p.attackMotion);step(g,.3);assert.ok(e.hp<e.mhp);assert.equal(p.passiveStacks,1);});
+test('stun interrupts an attack during windup',()=>{const {g,p,e}=duel();g.basicAttack(p,e);p.stun=.1;step(g,.3);assert.equal(e.hp,e.mhp);});
+test('a new match already contains three separated lanes of troops',()=>{const g=new Game();for(let team=0;team<2;team++)for(let lane=0;lane<3;lane++){const troops=g.units.filter(u=>u.kind==='minion'&&u.team===team&&u.lane===lane);assert.ok(troops.length>=3);assert.ok(troops.some(u=>u.minionType==='melee'));assert.ok(troops.some(u=>u.minionType==='ranged'));assert.ok(troops.some(u=>u.minionType==='siege'));assert.ok(dist(troops[0],troops[1])>35);}});
+test('lanes continue to spawn reinforcements and siege waves',()=>{const g=new Game();g.units.filter(u=>u.kind==='minion').forEach(u=>u.hp=0);step(g,18.1);assert.equal(g.wave,1);assert.equal(g.units.filter(u=>u.kind==='minion').length,18);});
