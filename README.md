@@ -35,3 +35,7 @@ Three.js r160：MIT，许可见 vendor/THREE-LICENSE.txt。
 - 孙悟空：成功挡招后护盾、腾云强化棒击、震地眩晕和三层棒击印记。
 
 伤害由模拟弹道与定时事件结算；AI 也使用相同技能。特效粒子按屏幕尺寸减量，使用有界弹道拖尾。`node tests/combat-browser-check.cjs` 检查五位英雄和移动端特效，可使用上述浏览器环境变量。
+
+人物模型资源的外观核对、许可、下载限制及接入方式见 [MODEL_RESOURCES.md](MODEL_RESOURCES.md)。
+
+卡死回归检查：`node tests/movement-browser-check.cjs`，覆盖无专属颜色的小兵交战、李白持续移动及普攻／技能、桌面和手机尺寸，支持同样的 GAME_URL / CHROME_PATH / PLAYWRIGHT_MODULE 环境变量。
