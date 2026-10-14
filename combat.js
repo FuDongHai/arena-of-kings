@@ -5,7 +5,7 @@ const clamp=v=>Math.max(70,Math.min(2330,v));
 export function effect(g,type,p,r=100,extra={}){
  const life=extra.life||.65;
  if(g.effects.length>=420)g.effects.splice(0,g.effects.length-419);
- g.effects.push({type,x:p.x,y:p.y,color:p.color||'#e5faff',r,life,max:life,angle:p.face||0,seed:++g.fxId,...extra});
+ g.effects.push({type,x:p.x,y:p.y,color:p.color||'#e5faff',r,life,max:life,angle:p.face||0,seed:++g.fxId,...extra,color:extra.color||p.color||(p.team===1?'#ffc48a':'#8edcff')});
 }
 function later(g,delay,source,run){g.pending.push({at:g.time+delay,source,run});}
 function hit(g,p,u,amount,mark=true){if(u.hp<=0||g.result)return false;if(u.invulnerable>0||u.guard>0){g.damage(u,amount,p);return false;}g.damage(u,amount,p);if(p.heroId==='diaochan'&&mark&&u.hp>0){u.flowers??={};const n=(u.flowers[p.id]?.count||0)+1;u.flowers[p.id]={count:n,time:5};if(n>=4){delete u.flowers[p.id];effect(g,'bloom',u,150,{color:p.color,life:1});p.hp=Math.min(p.mhp,p.hp+125);for(const e of enemies(g,p))if(distance(u,e)<155){if(hit(g,p,e,p.atk*1.8,false)!==false)e.slow=1.3;}}}return true;}
