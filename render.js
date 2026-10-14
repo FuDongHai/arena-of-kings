@@ -1,3 +1,4 @@
+import {drawFields,drawCombat,isCombatEffect} from './vfx.js';
 import {SIZE,LANES} from './core.js';
 export class Renderer{
  constructor(canvas,mini){this.c=canvas;this.ctx=canvas.getContext('2d');this.mini=mini;this.mx=mini.getContext('2d');this.cam={x:1200,y:1200};this.zoom=.7;this.t=0;this.dpr=1;this.resize();window.addEventListener('resize',()=>this.resize());this.terrain=document.createElement('canvas');this.terrain.width=1800;this.terrain.height=1800;this.makeTerrain();}
@@ -24,10 +25,12 @@ export class Renderer{
   const o=this.project(0,0);c.drawImage(this.terrain,o.x,o.y,SIZE*this.zoom,SIZE*this.zoom*.72);
   // Gentle river sparkle.
   for(let i=0;i<25;i++){const x=200+i*83,y=x*.7+420+Math.sin(i*4)*35,p=this.project(x,y);c.strokeStyle=`rgba(139,218,220,${.12+.06*Math.sin(this.t+i)})`;c.lineWidth=1;c.beginPath();c.ellipse(p.x,p.y,12+Math.sin(this.t+i)*4,3,0,0,7);c.stroke();}
+  drawFields(this,g);
   const entries=[...this.decor.map(d=>({...d,decor:true})),...g.units.filter(u=>u.hp>0)].sort((a,b)=>a.y-b.y);
   for(const u of entries){const p=this.project(u.x,u.y);if(p.x<-100||p.x>this.w+100||p.y<-150||p.y>this.h+100)continue;c.save();c.translate(p.x,p.y);c.scale(this.zoom,this.zoom);if(u.decor)this.drawDecor(u);else this.drawUnit(u,u===g.player);c.restore();}
   if(g.player.hp>0&&!lobby){const p=this.project(g.player.x,g.player.y);c.strokeStyle='#d0eaff44';c.lineWidth=1;c.beginPath();c.ellipse(p.x,p.y,95*this.zoom,65*this.zoom,0,0,7);c.stroke();if(g.recall>0){c.strokeStyle='#9ceaff';c.lineWidth=3;c.beginPath();c.ellipse(p.x,p.y,70*this.zoom,46*this.zoom,this.t,0,7);c.stroke();}}
-  for(const e of g.effects){const p=this.project(e.x,e.y),a=e.life/e.max;c.save();c.translate(p.x,p.y);c.globalAlpha=a;c.strokeStyle=e.color;c.fillStyle=e.color;c.shadowColor=e.color;c.shadowBlur=15;
+  drawCombat(this,g);
+  for(const e of g.effects){if(isCombatEffect(e))continue;const p=this.project(e.x,e.y),a=e.life/e.max;c.save();c.translate(p.x,p.y);c.globalAlpha=a;c.strokeStyle=e.color;c.fillStyle=e.color;c.shadowColor=e.color;c.shadowBlur=15;
    if(e.type==='number'){c.shadowBlur=4;c.font=`bold ${Math.max(12,18*this.zoom)}px Arial`;c.textAlign='center';c.fillText(e.text,0,-45*this.zoom-(1-a)*45);}
    else if(e.type==='bolt'){const to=this.project(e.tx,e.ty);c.lineWidth=3;c.beginPath();c.moveTo(0,-55*this.zoom);c.lineTo(to.x-p.x,to.y-p.y-10);c.stroke();}
    else{const r=e.r*this.zoom*(1-a*.6);c.lineWidth=e.type==='ultimate'?5:3;c.beginPath();c.ellipse(0,0,r,r*.72,this.t*.2,0,7);c.stroke();if(e.type==='slash'){c.lineWidth=8;c.beginPath();c.arc(0,-10,r,-2,.6);c.stroke();}if(e.type==='ultimate'){for(let i=0;i<8;i++){const angle=i*Math.PI/4+this.t,px=Math.cos(angle)*r,py=Math.sin(angle)*r*.72;this.polygon([[px,py-80*a],[px-5,py-20],[px,py],[px+5,py-20]],'#dddaff');}}if(e.type==='burst')for(let i=0;i<8;i++){const ang=i*.8;c.fillRect(Math.cos(ang)*r,Math.sin(ang)*r*.7,4,4);}}
@@ -41,6 +44,7 @@ export class Renderer{
   if(u.kind==='minion'){const bob=Math.sin(this.t*7+u.id)*2;c.fillStyle='#252f38';c.fillRect(-8,-13,6,17);c.fillRect(3,-13,6,17);this.polygon([[-12,-17],[-9,-35],[0,-40],[11,-34],[14,-15],[0,-10]],dark);this.ellipse(0,-38+bob,9,7,col);this.polygon([[-8,-39],[0,-48],[8,-39]],'#a9b7bc');c.strokeStyle='#c8cab2';c.lineWidth=3;c.beginPath();c.moveTo(15,-17);c.lineTo(19,-44);c.stroke();if(u.hp<u.mhp)this.health(u,-57,30);return;}
   const bob=Math.sin(this.t*6+u.id)*2;if(player){c.strokeStyle='#e5d394';c.lineWidth=2;c.beginPath();c.ellipse(0,1,29,16,0,0,7);c.stroke();c.strokeStyle='#70dfff55';c.lineWidth=7;c.stroke();}
   const moving=u._lastDrawX!==undefined&&Math.hypot(u.x-u._lastDrawX,u.y-u._lastDrawY)>.1;u._lastDrawX=u.x;u._lastDrawY=u.y;
+  if(u.leaping>0)c.translate(0,-Math.sin((1-u.leaping/.55)*Math.PI)*45);if(u.dancing>0)c.globalAlpha=.45;
   if(this.heroModels?.draw(c,u,this.t,moving)){if(u.shield>0||u.buff){c.strokeStyle=u.color;c.lineWidth=2;c.beginPath();c.ellipse(0,-45,42,65,0,0,7);c.stroke();}if(u.stun>0){c.fillStyle='#ffe4a2';c.font='20px Arial';c.fillText('✦',-8,-120);}this.health(u,-153,70);c.textAlign='center';c.font='10px Arial';c.fillStyle=player?'#f5e3b5':'#dce8e5';c.fillText(u.name,0,-164);c.fillStyle='#061c2e';c.fillRect(-43,-156,15,14);c.fillStyle='#e6dcac';c.fillText(u.level,-36,-145);return;}
   // Fallback when WebGL is unavailable.
   this.polygon([[-10,-41],[-25,-8],[-12,9],[4,1],[13,-28]],blue?'#284b7e':'#8b3840');c.fillStyle='#182734';c.fillRect(-11,-12,8,19);c.fillRect(5,-12,8,19);this.polygon([[-19,-36],[-10,-50],[10,-50],[21,-35],[11,-13],[-11,-13]],blue?'#84a9c2':'#b48681','#d6d4bd');this.polygon([[-19,-36],[-25,-32],[-18,-23],[-9,-33]],'#c6cdbd');this.polygon([[13,-39],[24,-34],[20,-24],[8,-30]],'#e5dab5');this.polygon([[-9,-43],[-9,-24],[10,-24],[10,-43]],dark);this.ellipse(0,-57+bob,10,11,'#e0c7ab');this.polygon([[-12,-58+bob],[-5,-72+bob],[9,-69+bob],[14,-57+bob],[4,-61+bob],[0,-54+bob]],u.model===3?'#d5d9f2':u.model===1?'#e9cf8a':'#d8e5ed');
